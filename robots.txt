@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# O ?cnpj= gera URLs ilimitadas com o mesmo HTML estatico.
+# O <link rel="canonical"> ja consolida, isto evita o rastreamento inutil.
+Disallow: /*?cnpj=
+
+Sitemap: https://marcosdemori.github.io/consultar-cnpj/sitemap.xml
