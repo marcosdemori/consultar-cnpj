@@ -59,12 +59,28 @@ const csvSafe = v => {
   const t = String(v == null ? '' : v);
   return /^[=+\-@\t\r\n]/.test(t) ? "'" + t : t;
 };
+/* Normaliza CNPJ preservando letras: desde o CNPJ alfanumerico as 12 primeiras
+   posicoes aceitam A-Z e 0-9; apenas os 2 digitos verificadores seguem numericos.
+   Nao trunca nem descarta excedente, para que entradas longas demais continuem
+   sendo rejeitadas pela validacao em vez de silenciosamente viram um CNPJ valido. */
+const dc = v => String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
 const f14 = v => {
-  const d = dg(v).slice(0, 14);
-  return d.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
-           .replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2');
+  const s = dc(v).slice(0, 14);
+  // Impede letra nas duas ultimas posicoes, que sao sempre numericas.
+  const d = s.slice(0, 12) + s.slice(12).replace(/\D/g, '');
+  let o = d.slice(0, 2);
+  if (d.length > 2)  o += '.' + d.slice(2, 5);
+  if (d.length > 5)  o += '.' + d.slice(5, 8);
+  if (d.length > 8)  o += '/' + d.slice(8, 12);
+  if (d.length > 12) o += '-' + d.slice(12, 14);
+  return o;
 };
-const fC = v => { const d = dg(v); return d.length===14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5') : v||'—'; };
+const fC = v => {
+  const d = dc(v);
+  return d.length === 14
+    ? d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8,12)+'-'+d.slice(12)
+    : v || '—';
+};
 const fCep = v => { const d = dg(v); return d.length===8 ? d.replace(/(\d{5})(\d{3})/,'$1-$2') : v||'—'; };
 const fD = v => { if(!v) return '—'; const d = new Date(v+'T12:00:00'); return isNaN(d) ? '—' : d.toLocaleDateString('pt-BR'); };
 const fM = v => { if(v==null||v==='') return '—'; return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v)); };
@@ -158,12 +174,12 @@ function canR(c) {
   return{ok:true};
 }
 function regR(c) { rHist.push(Date.now()); lCnpj=c; lAt=Date.now(); }
-const savL = c => { try{localStorage.setItem(LK,dg(c));}catch(e){} };
+const savL = c => { try{localStorage.setItem(LK,dc(c));}catch(e){} };
 const loadL = () => { try{return localStorage.getItem(LK)||'';}catch(e){return '';} };
 const clrL = () => { try{localStorage.removeItem(LK);}catch(e){} };
 function savH(c) {
   try{
-    const cl=dg(c);
+    const cl=dc(c);
     let h=JSON.parse(localStorage.getItem(HK)||'[]');
     h=[cl,...h.filter(x=>x!==cl)].slice(0,7);
     localStorage.setItem(HK,JSON.stringify(h));
@@ -180,12 +196,19 @@ function renderHist() {
     histList.appendChild(b);
   });
 }
+/* Validacao do CNPJ, numerico ou alfanumerico (modulo 11).
+   O valor de cada caractere e o codigo ASCII menos 48, entao '0'-'9' valem
+   0-9 e 'A'-'Z' valem 17-42. Os pesos e a regra do resto nao mudaram, o que
+   mantem o resultado identico ao calculo antigo para CNPJ puramente numerico.
+   Referencia: https://docs.cnpj.ws/blog/cnpj-alfanumerico */
 function vCnpj(c) {
-  const d=dg(c);
-  if(d.length!==14||/^(\d)\1+$/.test(d)) return false;
+  const d=dc(c);
+  if(!/^[0-9A-Z]{12}[0-9]{2}$/.test(d)) return false;
+  if(/^(.)\1{13}$/.test(d)) return false;
+  const val=i=>d.charCodeAt(i)-48;
   const calc=(s,t)=>{
     let sum=0,pos=s-7;
-    for(let i=s;i>=1;i--){sum+=d.charAt(s-i)*pos--;if(pos<2)pos=9;}
+    for(let i=s;i>=1;i--){sum+=val(s-i)*pos--;if(pos<2)pos=9;}
     const r=sum%11<2?0:11-(sum%11); return r===Number(d.charAt(t));
   };
   return calc(12,12)&&calc(13,13);
@@ -212,7 +235,7 @@ function fi(lbl,val,cls='',mono=false,copyable=false) {
 /* === RENDER INDIVIDUAL === */
 function renderData(data) {
   const est=data.estabelecimento||{}; const uf=est.estado?.sigla||'';
-  curCnpj=dg(est.cnpj||cnpjInput.value);
+  curCnpj=dc(est.cnpj||cnpjInput.value);
   banName.textContent=data.razao_social||'—';
   banFantasy.textContent=est.nome_fantasia?`Nome fantasia: ${est.nome_fantasia}`:'Sem nome fantasia cadastrado';
   banBadges.innerHTML='';
@@ -222,7 +245,7 @@ function renderData(data) {
     b.innerHTML=`<span class="bdg-dot"></span>${esc(t)}`; banBadges.appendChild(b);
   });
   banMeta.innerHTML='';
-  [{l:'CNPJ',v:fC(est.cnpj),mono:true,copyVal:dg(est.cnpj)},{l:'Situação',v:sit,cls:scls(sit)},
+  [{l:'CNPJ',v:fC(est.cnpj),mono:true,copyVal:dc(est.cnpj)},{l:'Situação',v:sit,cls:scls(sit)},
    {l:'Abertura',v:fD(est.data_inicio_atividade)},{l:'Porte',v:data.porte?.descricao||'—'},
    {l:'Regime',v:reg.name},{l:'Capital social',v:fM(data.capital_social)}].forEach(({l,v,cls,mono,copyVal})=>{
     const d=document.createElement('div'); d.className='bm-item'+(copyVal?' copyable':''); d.title=copyVal?'Clique para copiar':'';
@@ -467,7 +490,7 @@ async function tryCnpjaFallback(cnpj) {
 
 /* === CONSULTA INDIVIDUAL === */
 async function consultar() {
-  const cnpj=dg(cnpjInput.value); hErr();
+  const cnpj=dc(cnpjInput.value); hErr();
   if(!vCnpj(cnpj)){sErr('CNPJ inválido. Verifique os dígitos e tente novamente.');return;}
   const chk=canR(cnpj);
   if(!chk.ok){startCd(chk.ms,chk.msg);sToast(chk.msg,'warn');return;}
@@ -498,7 +521,7 @@ function shareUrl(c) {
   const u = new URL(location.href);
   u.search = '';
   u.hash = '';
-  if (dg(c).length === 14) u.searchParams.set('cnpj', dg(c));
+  if (dc(c).length === 14) u.searchParams.set('cnpj', dc(c));
   return u.toString();
 }
 
@@ -507,7 +530,7 @@ cnpjInput.addEventListener('keydown',e=>{if(e.key==='Enter')consultar();});
 cBtn.addEventListener('click',consultar);
 lBtn.addEventListener('click',limpar);
 G('shareBtn').addEventListener('click',async()=>{
-  const c=curCnpj||dg(cnpjInput.value);
+  const c=curCnpj||dc(cnpjInput.value);
   if(c.length!==14){sToast('Consulte um CNPJ primeiro.','warn');return;}
   (await cpTxt(shareUrl(c)))?sToast('Link copiado!','ok'):sToast('Não foi possível copiar.','warn');
 });
@@ -546,13 +569,13 @@ delaySlider.addEventListener('input',()=>{ delayVal.textContent=delaySlider.valu
 const BULK_MAX = 50;
 /* Separa válidos, inválidos e excedentes para que nada seja ignorado em silêncio. */
 function parseBulkDetailed() {
-  const raw = bulkInput.value.split('\n').map(l=>dg(l.trim())).filter(Boolean);
+  const raw = bulkInput.value.split('\n').map(l=>dc(l.trim())).filter(Boolean);
   const seen = new Set();
   const valid = [], invalid = [];
   raw.forEach(c => {
     if(seen.has(c)) return;
     seen.add(c);
-    (c.length===14 && vCnpj(c) ? valid : invalid).push(c);
+    (vCnpj(c) ? valid : invalid).push(c);
   });
   return { valid: valid.slice(0,BULK_MAX), invalid, overflow: Math.max(0, valid.length-BULK_MAX) };
 }
@@ -841,7 +864,7 @@ copiarTudo.addEventListener('click',async()=>{
 window.addEventListener('load',()=>{
   renderHist();
   // boot.js leu o ?cnpj= e removeu o parametro da URL antes do beacon carregar.
-  const uc=dg(window.__initialCnpj||'');
+  const uc=dc(window.__initialCnpj||'');
   clrL();
   if(uc.length===14){cnpjInput.value=f14(uc);consultar();}
 });

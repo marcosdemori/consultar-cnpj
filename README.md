@@ -49,6 +49,14 @@ Em caso de *rate limit* (HTTP 429), a aplicação **aguarda e repete na API prim
 - CNPJs são validados por dígito verificador antes do envio, e itens inválidos ou acima do limite de 50 são informados em vez de descartados em silêncio.
 - Corrigida condição de corrida em que pausar ou limpar o lote deixava a execução anterior sobrescrever a interface.
 
+## 🔤 CNPJ alfanumérico
+
+A validação aceita o formato alfanumérico (`12.ABC.345/01DE-35`), em que as 12 primeiras posições admitem `A-Z` e `0-9` e os 2 dígitos verificadores seguem numéricos.
+
+O dígito verificador usa o mesmo módulo 11 de sempre, com os caracteres convertidos por *código ASCII − 48* (`0`–`9` → 0–9, `A` → 17, …, `Z` → 42). Como `'0'` tem ASCII 48, o cálculo devolve exatamente o mesmo resultado de antes para CNPJ puramente numérico. Entrada em minúsculas é normalizada para maiúsculas.
+
+> ⚠️ A `open.cnpja.com` aceita o formato alfanumérico (responde 404 "not registered", não erro de validação). Já a `publica.cnpj.ws` documenta suporte, mas **não foi possível confirmar por teste** — a API estava inacessível durante a verificação. Vale revalidar quando houver um CNPJ alfanumérico real emitido.
+
 ## 🔒 Privacidade
 
 A aplicação **não mantém o CNPJ consultado na barra de endereços**. O parâmetro `?cnpj=` de links compartilhados é lido e removido por `boot.js` antes de qualquer script de terceiros carregar, para que o analytics não registre qual empresa cada visitante consultou. O compartilhamento continua disponível pelo botão **Copiar link**, que monta a URL sob demanda.
@@ -63,6 +71,7 @@ Para ativar, substitua `SEU_TOKEN_AQUI` em `index.html` pelo token gerado em *da
 
 ## 🔍 Funcionalidades
 
+- **CNPJ alfanumérico** aceito na consulta individual e em massa, além do formato numérico.
 - **Dashboard** com dados cadastrais, sócios, CNAEs e cronologia.
 - **Regime tributário:** MEI, Simples Nacional e Regime Ordinário com datas de opção.
 - **Consulta em massa** de até 50 CNPJs por lote, com intervalo configurável.

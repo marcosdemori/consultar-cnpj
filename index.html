@@ -104,12 +104,12 @@
         <div class="s-row">
           <div class="s-wrap">
             <svg class="s-ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input class="s-in mono" id="cnpjInput" type="text" placeholder="00.000.000/0001-00" autocomplete="off" spellcheck="false"/>
+            <input class="s-in mono" id="cnpjInput" type="text" placeholder="00.000.000/0001-00 ou 12.ABC.345/01DE-35" maxlength="18" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="CNPJ a consultar, numérico ou alfanumérico" />
           </div>
           <button class="btn btn-p" id="consultarBtn">Consultar</button>
           <button class="btn btn-g" id="limparBtn">Limpar</button>
         </div>
-        <div class="s-hint">Pressione <span class="kbd">↵</span> para consultar &nbsp;·&nbsp; Formato: 00.000.000/0000-00</div>
+        <div class="s-hint">Pressione <span class="kbd">↵</span> para consultar &nbsp;·&nbsp; Formatos: 00.000.000/0000-00 e alfanumérico 12.ABC.345/01DE-35</div>
         <div class="err" id="errorBox">
           <svg class="err-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
           <span id="errorText"></span>
@@ -248,7 +248,7 @@
         </div>
 
         <div class="bulk-textarea-wrap">
-          <textarea class="bulk-textarea" id="bulkInput" placeholder="11.111.111/0001-11&#10;22.222.222/0001-22&#10;33333333000133&#10;..." spellcheck="false"></textarea>
+          <textarea class="bulk-textarea" id="bulkInput" placeholder="11.111.111/0001-11&#10;22.222.222/0001-22&#10;33333333000133&#10;12.ABC.345/01DE-35&#10;..." spellcheck="false"></textarea>
           <div class="bulk-count-badge" id="bulkCountBadge">0 CNPJs</div>
         </div>
 

@@ -12,10 +12,12 @@
   'use strict';
   var cnpj = '';
   try {
-    cnpj = (new URLSearchParams(location.search).get('cnpj') || '').replace(/\D/g, '');
+    // Aceita CNPJ alfanumerico: 12 posicoes A-Z/0-9 mais 2 digitos verificadores.
+    cnpj = (new URLSearchParams(location.search).get('cnpj') || '')
+      .toUpperCase().replace(/[^0-9A-Z]/g, '');
   } catch (e) { /* URL malformada: segue sem consulta inicial */ }
 
-  window.__initialCnpj = cnpj.length === 14 ? cnpj : '';
+  window.__initialCnpj = /^[0-9A-Z]{12}[0-9]{2}$/.test(cnpj) ? cnpj : '';
 
   // Remove a query string do endereco sem recarregar nem criar entrada no historico.
   if (location.search) {
